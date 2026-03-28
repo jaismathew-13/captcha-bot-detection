@@ -1,0 +1,4 @@
+Flask
+captcha
+Pillow
+gunicorn

@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Secure Verification — AdaptiveGuard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #080c14;
+      --surface: #0e1520;
+      --surface2: #131c2b;
+      --border: rgba(99, 179, 237, 0.12);
+      --border-glow: rgba(99, 179, 237, 0.35);
+      --accent: #38bdf8;
+      --accent2: #0ea5e9;
+      --danger: #f87171;
+      --warn: #fb923c;
+      --success: #4ade80;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --mono: 'Space Mono', monospace;
+      --sans: 'DM Sans', sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      font-family: var(--sans);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Animated background grid */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(56, 189, 248, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(56, 189, 248, 0.03) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Radial glow */
+    body::after {
+      content: '';
+      position: fixed;
+      top: -30%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 800px;
+      height: 600px;
+      background: radial-gradient(ellipse, rgba(14, 165, 233, 0.08) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrapper {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 440px;
+      animation: fadeUp 0.6s ease both;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Header badge */
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 1.5rem;
+      animation: fadeUp 0.6s ease 0.1s both;
+    }
+
+    .brand-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--accent2), #0369a1);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      box-shadow: 0 0 16px rgba(14, 165, 233, 0.4);
+    }
+
+    .brand-name {
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      color: var(--accent);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    /* Risk indicator */
+    .risk-badge {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      padding: 2px 10px;
+      border-radius: 100px;
+      border: 1px solid;
+      margin-left: auto;
+      opacity: 0;
+      transition: opacity 0.4s;
+    }
+    .risk-badge.visible { opacity: 1; }
+    .risk-badge.low    { color: var(--success); border-color: var(--success); }
+    .risk-badge.medium { color: var(--accent);  border-color: var(--accent); }
+    .risk-badge.high   { color: var(--warn);    border-color: var(--warn); }
+    .risk-badge.critical { color: var(--danger);  border-color: var(--danger); }
+
+    /* Card */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.02),
+                  0 24px 48px rgba(0,0,0,0.5);
+      animation: fadeUp 0.6s ease 0.15s both;
+    }
+
+    .card-header {
+      margin-bottom: 1.75rem;
+    }
+
+    .card-title {
+      font-weight: 600;
+      font-size: 1.2rem;
+      color: #f1f5f9;
+      margin-bottom: 0.35rem;
+    }
+
+    .card-sub {
+      font-size: 0.84rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    /* Difficulty tag */
+    .difficulty-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 3px 10px;
+      border-radius: 100px;
+      margin-top: 0.6rem;
+    }
+    .diff-medium { background: rgba(56,189,248,0.1); color: var(--accent); border: 1px solid rgba(56,189,248,0.25); }
+    .diff-hard   { background: rgba(251,146,60,0.1); color: var(--warn);   border: 1px solid rgba(251,146,60,0.25); }
+    .diff-easy   { background: rgba(74,222,128,0.1); color: var(--success);border: 1px solid rgba(74,222,128,0.25); }
+
+    /* CAPTCHA display */
+    .captcha-wrap {
+      position: relative;
+      margin-bottom: 1.25rem;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      transition: border-color 0.4s, box-shadow 0.4s;
+    }
+    .captcha-wrap.glow-med  {
+      border-color: rgba(56,189,248,0.4);
+      box-shadow: 0 0 20px rgba(56,189,248,0.15);
+    }
+    .captcha-wrap.glow-high {
+      border-color: rgba(251,146,60,0.5);
+      box-shadow: 0 0 20px rgba(251,146,60,0.15);
+    }
+
+    .captcha-img {
+      width: 100%;
+      display: block;
+      background: #fff;
+      image-rendering: crisp-edges;
+    }
+
+    .captcha-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 0.75rem;
+      background: var(--surface2);
+      border-top: 1px solid var(--border);
+    }
+
+    .captcha-label {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .btn-refresh {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--accent);
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      padding: 3px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex; align-items: center; gap: 5px;
+      letter-spacing: 0.04em;
+    }
+    .btn-refresh:hover {
+      background: rgba(56,189,248,0.08);
+      border-color: var(--accent);
+    }
+    .btn-refresh.loading { opacity: 0.5; pointer-events: none; }
+
+    /* Form */
+    .form-group { margin-bottom: 1.1rem; }
+
+    .form-label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: #94a3b8;
+      margin-bottom: 0.45rem;
+      letter-spacing: 0.02em;
+    }
+
+    .form-input {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.7rem 1rem;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 1rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      outline: none;
+    }
+    .form-input::placeholder { color: var(--muted); text-transform: none; letter-spacing: 0; font-size: 0.85rem; }
+    .form-input:focus {
+      border-color: var(--accent2);
+      box-shadow: 0 0 0 3px rgba(14,165,233,0.12);
+    }
+
+    .btn-submit {
+      width: 100%;
+      background: linear-gradient(135deg, var(--accent2) 0%, #0369a1 100%);
+      border: none;
+      border-radius: 8px;
+      padding: 0.8rem;
+      color: #fff;
+      font-family: var(--sans);
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 0.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-submit::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(rgba(255,255,255,0.1), transparent);
+    }
+    .btn-submit:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px rgba(14,165,233,0.35);
+    }
+    .btn-submit:active { transform: translateY(0); }
+
+    /* Footer */
+    .footer {
+      margin-top: 1.5rem;
+      text-align: center;
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+      animation: fadeUp 0.6s ease 0.3s both;
+    }
+
+    .footer span { color: var(--accent); }
+
+    /* Hidden fields */
+    .honeypot-field {
+      position: absolute;
+      left: -9999px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* Scanning animation on load */
+    .scan-line {
+      position: fixed;
+      top: -2px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      animation: scan 2.5s ease-out forwards;
+      z-index: 999;
+    }
+    @keyframes scan {
+      from { top: -2px; opacity: 1; }
+      to   { top: 100vh; opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="scan-line"></div>
+
+  <div class="wrapper">
+    <div class="brand" id="brandBar">
+      <div class="brand-icon">🛡️</div>
+      <span class="brand-name">AdaptiveGuard</span>
+      <span class="risk-badge" id="riskBadge">Scanning...</span>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Human Verification</div>
+        <div class="card-sub">Complete the challenge below to continue.</div>
+        {% if difficulty == 'hard' %}
+          <span class="difficulty-tag diff-hard">⚡ Enhanced Security Mode</span>
+        {% elif difficulty == 'medium' %}
+          <span class="difficulty-tag diff-medium">🔵 Standard Verification</span>
+        {% else %}
+          <span class="difficulty-tag diff-easy">✓ Basic Check</span>
+        {% endif %}
+      </div>
+
+      <form id="mainForm" method="POST" action="/submit">
+        <!-- Honeypot: bots fill all fields, humans never see this -->
+        <input class="honeypot-field" type="text" name="website"
+               autocomplete="off" tabindex="-1">
+
+        <!-- JS token: set to "1" by inline script -->
+        <input type="hidden" name="js_enabled" id="js_enabled" value="0">
+
+        <!-- Mouse interaction token: set by behavior.js on mousemove/touch -->
+        <input type="hidden" name="human_token" id="human_token" value="0">
+
+        <!-- CAPTCHA image -->
+        <div class="captcha-wrap" id="captchaWrap">
+          <img class="captcha-img" id="captchaImg"
+               src="{{ captcha_url }}" alt="CAPTCHA challenge">
+          <div class="captcha-toolbar">
+            <span class="captcha-label">Type the characters above</span>
+            <button type="button" class="btn-refresh" id="refreshBtn">
+              ↻ New
+            </button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="captcha_response">Your Answer</label>
+          <input class="form-input" type="text" id="captcha_response"
+                 name="captcha_response" placeholder="Enter characters" required
+                 autocomplete="off" autocorrect="off" spellcheck="false">
+        </div>
+
+        <button type="submit" class="btn-submit">Verify Identity →</button>
+      </form>
+    </div>
+
+    <div class="footer">Protected by <span>AdaptiveGuard v2.0</span> · All access monitored</div>
+  </div>
+
+  <script>
+    // Set JS token immediately
+    document.getElementById("js_enabled").value = "1";
+
+    // CAPTCHA refresh via AJAX
+    const refreshBtn = document.getElementById("refreshBtn");
+    const captchaImg = document.getElementById("captchaImg");
+    const captchaWrap = document.getElementById("captchaWrap");
+
+    refreshBtn.addEventListener("click", async () => {
+      refreshBtn.classList.add("loading");
+      refreshBtn.textContent = "↻ ...";
+      try {
+        const resp = await fetch("/refresh-captcha");
+        const data = await resp.json();
+        captchaImg.src = data.captcha_url;
+        captchaImg.onload = () => {
+          refreshBtn.classList.remove("loading");
+          refreshBtn.textContent = "↻ New";
+        };
+        document.getElementById("captcha_response").value = "";
+        document.getElementById("captcha_response").focus();
+      } catch (e) {
+        refreshBtn.classList.remove("loading");
+        refreshBtn.textContent = "↻ New";
+      }
+    });
+
+    // Listen for fingerprint result and update UI
+    window.addEventListener("fp_result", (e) => {
+      const { risk } = e.detail;
+      const badge = document.getElementById("riskBadge");
+      const wrap = document.getElementById("captchaWrap");
+
+      const labels = {
+        low:      "✓ Trusted",
+        medium:   "● Standard",
+        high:     "▲ Enhanced",
+        critical: "✕ High Risk",
+      };
+      badge.textContent = labels[risk] || risk;
+      badge.className = `risk-badge visible ${risk}`;
+
+      if (risk === "medium") wrap.classList.add("glow-med");
+      if (risk === "high" || risk === "critical") wrap.classList.add("glow-high");
+    });
+  </script>
+
+  <script src="/static/fingerprint.js"></script>
+  <script src="/static/behavior.js"></script>
+</body>
+</html>

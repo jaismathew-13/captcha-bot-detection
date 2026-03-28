@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Threat Intelligence — AdaptiveGuard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #07090f;
+      --surface: #0d1117;
+      --surface2: #161b22;
+      --border: rgba(255,255,255,0.07);
+      --accent: #38bdf8;
+      --danger: #f87171;
+      --warn: #fb923c;
+      --medium: #facc15;
+      --success: #4ade80;
+      --text: #e2e8f0;
+      --muted: #4b5563;
+      --mono: 'Space Mono', monospace;
+      --sans: 'DM Sans', sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      font-family: var(--sans);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* Topbar */
+    .topbar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0.85rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .topbar-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-icon {
+      width: 30px; height: 30px;
+      background: linear-gradient(135deg, #0ea5e9, #0369a1);
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+      box-shadow: 0 0 12px rgba(14,165,233,0.3);
+    }
+
+    .logo-name {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      text-transform: uppercase;
+    }
+
+    .topbar-sep { flex: 1; }
+
+    .live-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      color: var(--success);
+      letter-spacing: 0.06em;
+    }
+
+    .live-dot {
+      width: 6px; height: 6px;
+      background: var(--success);
+      border-radius: 50%;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    .btn-clear {
+      background: rgba(248,113,113,0.1);
+      border: 1px solid rgba(248,113,113,0.3);
+      color: var(--danger);
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      padding: 5px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      letter-spacing: 0.06em;
+      transition: all 0.2s;
+    }
+    .btn-clear:hover { background: rgba(248,113,113,0.2); }
+
+    /* Main layout */
+    .page { padding: 1.5rem 2rem; max-width: 1400px; margin: 0 auto; }
+
+    /* Stats bar */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.1rem 1.25rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      right: 0; height: 2px;
+    }
+    .stat-card.total::before  { background: var(--accent); }
+    .stat-card.today::before  { background: var(--success); }
+    .stat-card.critical::before { background: var(--danger); }
+    .stat-card.topip::before  { background: var(--warn); }
+
+    .stat-label {
+      font-family: var(--mono);
+      font-size: 0.62rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-value {
+      font-family: var(--mono);
+      font-size: 1.8rem;
+      font-weight: 700;
+      line-height: 1;
+      margin-bottom: 0.25rem;
+    }
+    .stat-card.total .stat-value   { color: var(--accent); }
+    .stat-card.today .stat-value   { color: var(--success); }
+    .stat-card.critical .stat-value { color: var(--danger); }
+    .stat-card.topip .stat-value   { color: var(--warn); font-size: 1rem; word-break: break-all; }
+
+    .stat-sub {
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+
+    /* Charts + table layout */
+    .content-grid {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 0.9rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .panel-title {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+    }
+
+    .panel-count {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      color: var(--muted);
+    }
+
+    .chart-wrap {
+      padding: 1.25rem;
+    }
+
+    /* Bot table */
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+    }
+
+    thead th {
+      font-family: var(--mono);
+      font-size: 0.62rem;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--muted);
+      padding: 0.7rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+    tbody tr:hover { background: rgba(255,255,255,0.02); }
+    tbody tr:last-child { border-bottom: none; }
+
+    /* Row color coding */
+    tbody tr.row-critical td:first-child { border-left: 2px solid var(--danger); }
+    tbody tr.row-high     td:first-child { border-left: 2px solid var(--warn); }
+    tbody tr.row-medium   td:first-child { border-left: 2px solid var(--medium); }
+    tbody tr.row-low      td:first-child { border-left: 2px solid var(--success); }
+
+    td {
+      padding: 0.7rem 1rem;
+      color: var(--text);
+      vertical-align: middle;
+    }
+
+    td.mono { font-family: var(--mono); font-size: 0.72rem; }
+    td.muted { color: var(--muted); font-size: 0.75rem; }
+    td.ua { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.72rem; color: #64748b; }
+
+    .risk-pill {
+      font-family: var(--mono);
+      font-size: 0.62rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 100px;
+      white-space: nowrap;
+    }
+    .risk-pill.critical { background: rgba(248,113,113,0.15); color: var(--danger); }
+    .risk-pill.high     { background: rgba(251,146,60,0.15);  color: var(--warn); }
+    .risk-pill.medium   { background: rgba(250,204,21,0.15);  color: var(--medium); }
+    .risk-pill.low      { background: rgba(74,222,128,0.15);  color: var(--success); }
+
+    .score-num {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .signals-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 3px;
+    }
+
+    .signal-tag {
+      font-size: 0.6rem;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: rgba(255,255,255,0.05);
+      color: #64748b;
+      font-family: var(--mono);
+    }
+
+    /* Trap interactions */
+    .trap-table-wrap { overflow-x: auto; }
+
+    .empty-state {
+      padding: 3rem;
+      text-align: center;
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    /* Auto-refresh countdown */
+    .refresh-info {
+      font-family: var(--mono);
+      font-size: 0.6rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-logo">
+    <div class="logo-icon">🛡️</div>
+    <span class="logo-name">AdaptiveGuard · Threat Intel</span>
+  </div>
+  <div class="topbar-sep"></div>
+  <div class="live-indicator">
+    <div class="live-dot"></div>
+    LIVE · auto-refresh <span id="countdown">10</span>s
+  </div>
+  <button class="btn-clear" onclick="clearAll()">✕ Clear All</button>
+</div>
+
+<div class="page">
+
+  <!-- Stats -->
+  <div class="stats-grid">
+    <div class="stat-card total">
+      <div class="stat-label">Total Captured</div>
+      <div class="stat-value">{{ stats.total }}</div>
+      <div class="stat-sub">all time</div>
+    </div>
+    <div class="stat-card today">
+      <div class="stat-label">Captured Today</div>
+      <div class="stat-value">{{ stats.today }}</div>
+      <div class="stat-sub">UTC date</div>
+    </div>
+    <div class="stat-card critical">
+      <div class="stat-label">Critical Risk</div>
+      <div class="stat-value">{{ stats.critical }}</div>
+      <div class="stat-sub">score ≥ 80</div>
+    </div>
+    <div class="stat-card topip">
+      <div class="stat-label">Most Active IP</div>
+      <div class="stat-value">{{ stats.top_ip }}</div>
+      <div class="stat-sub">highest frequency</div>
+    </div>
+  </div>
+
+  <!-- Chart + Table -->
+  <div class="content-grid">
+
+    <!-- Chart panel -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Risk Distribution</span>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="riskChart" height="220"></canvas>
+      </div>
+    </div>
+
+    <!-- Bot table -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Captured Bots</span>
+        <span class="panel-count">{{ bots|length }} records</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>IP Address</th>
+              <th>Risk</th>
+              <th>Score</th>
+              <th>Signals</th>
+              <th>User-Agent</th>
+              <th>Timestamp</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for bot in bots %}
+            <tr class="row-{{ bot['risk_label'] }}">
+              <td class="mono muted">#{{ bot['id'] }}</td>
+              <td class="mono">{{ bot['ip_address'] }}</td>
+              <td>
+                <span class="risk-pill {{ bot['risk_label'] }}">
+                  {% if bot['risk_label'] == 'critical' %}🚨 CRITICAL
+                  {% elif bot['risk_label'] == 'high' %}🔶 HIGH
+                  {% elif bot['risk_label'] == 'medium' %}⚠️ MEDIUM
+                  {% else %}✅ LOW{% endif %}
+                </span>
+              </td>
+              <td>
+                <span class="score-num" style="color:
+                  {% if bot['risk_score'] >= 80 %}#f87171
+                  {% elif bot['risk_score'] >= 56 %}#fb923c
+                  {% elif bot['risk_score'] >= 26 %}#facc15
+                  {% else %}#4ade80{% endif %}">
+                  {{ bot['risk_score'] }}
+                </span>
+              </td>
+              <td>
+                <div class="signals-list">
+                  {% set sigs = bot['signals'] | tojson | fromjson %}
+                  {% for s in sigs[:4] %}
+                    <span class="signal-tag">{{ s }}</span>
+                  {% endfor %}
+                  {% if sigs|length > 4 %}
+                    <span class="signal-tag">+{{ sigs|length - 4 }}</span>
+                  {% endif %}
+                </div>
+              </td>
+              <td class="ua" title="{{ bot['user_agent'] }}">{{ bot['user_agent'] }}</td>
+              <td class="muted mono">{{ bot['timestamp'][:19] }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="7" class="empty-state">No bots captured yet. System is monitoring.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Trap interactions -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">🪤 Honeytrap Interactions</span>
+      <span class="panel-count">{{ interactions|length }} events</span>
+    </div>
+    <div class="trap-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>IP Address</th>
+            <th>Event</th>
+            <th>User-Agent</th>
+            <th>Timestamp</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for evt in interactions %}
+          <tr>
+            <td class="mono muted">#{{ evt['id'] }}</td>
+            <td class="mono">{{ evt['ip_address'] }}</td>
+            <td>
+              <span class="signal-tag" style="color:#fb923c; background:rgba(251,146,60,0.1)">
+                {{ evt['event_type'] }}
+              </span>
+            </td>
+            <td class="ua" title="{{ evt['user_agent'] }}">{{ evt['user_agent'] }}</td>
+            <td class="muted mono">{{ evt['timestamp'][:19] }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" class="empty-state">No trap interactions yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ── Risk distribution chart ───────────────────────────────────────────────
+  const bots = {{ bots | tojson }};
+
+  const counts = { critical: 0, high: 0, medium: 0, low: 0 };
+  bots.forEach(b => {
+    const lbl = b.risk_label || 'low';
+    if (counts[lbl] !== undefined) counts[lbl]++;
+  });
+
+  const ctx = document.getElementById("riskChart").getContext("2d");
+  new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: ["Critical", "High", "Medium", "Low"],
+      datasets: [{
+        label: "Captures",
+        data: [counts.critical, counts.high, counts.medium, counts.low],
+        backgroundColor: [
+          "rgba(248,113,113,0.7)",
+          "rgba(251,146,60,0.7)",
+          "rgba(250,204,21,0.7)",
+          "rgba(74,222,128,0.7)",
+        ],
+        borderColor: [
+          "rgba(248,113,113,1)",
+          "rgba(251,146,60,1)",
+          "rgba(250,204,21,1)",
+          "rgba(74,222,128,1)",
+        ],
+        borderWidth: 1,
+        borderRadius: 6,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: "#0d1117",
+          titleColor: "#e2e8f0",
+          bodyColor: "#64748b",
+          borderColor: "rgba(255,255,255,0.07)",
+          borderWidth: 1,
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: "rgba(255,255,255,0.04)" },
+          ticks: { color: "#4b5563", font: { family: "Space Mono", size: 10 } }
+        },
+        y: {
+          grid: { color: "rgba(255,255,255,0.04)" },
+          ticks: { color: "#4b5563", font: { family: "Space Mono", size: 10 }, stepSize: 1 },
+          beginAtZero: true,
+        }
+      }
+    }
+  });
+
+  // ── Auto-refresh countdown ────────────────────────────────────────────────
+  let secs = 10;
+  const countEl = document.getElementById("countdown");
+  setInterval(() => {
+    secs--;
+    countEl.textContent = secs;
+    if (secs <= 0) {
+      window.location.reload();
+    }
+  }, 1000);
+
+  // ── Clear all ─────────────────────────────────────────────────────────────
+  async function clearAll() {
+    if (!confirm("Delete all captured bot records and trap interactions?")) return;
+    await fetch("/admin/clear", { method: "POST" });
+    window.location.reload();
+  }
+</script>
+</body>
+</html>

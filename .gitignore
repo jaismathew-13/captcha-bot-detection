@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+
+# Flask / Database
+honeypot.db
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.ico
+*.db-journal
+
+# Local environment
+.vscode/
+.idea/
+.DS_Store

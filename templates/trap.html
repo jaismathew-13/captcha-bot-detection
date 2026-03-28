@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — NovaTech Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #f0f4f8;
+      color: #1a202c;
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 240px;
+      background: #1a1f36;
+      color: #a0aec0;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      padding: 0;
+    }
+
+    .sidebar-logo {
+      padding: 1.5rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-icon {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+    }
+
+    .logo-text {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .sidebar-nav {
+      padding: 1.25rem 0;
+      flex: 1;
+    }
+
+    .nav-label {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #4a5568;
+      padding: 0 1.25rem;
+      margin-bottom: 0.5rem;
+      margin-top: 1rem;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0.6rem 1.25rem;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: background 0.15s;
+      text-decoration: none;
+      color: #a0aec0;
+      border-left: 3px solid transparent;
+    }
+
+    .nav-item:hover { background: rgba(255,255,255,0.04); color: #e2e8f0; }
+    .nav-item.active {
+      background: rgba(102,126,234,0.15);
+      color: #fff;
+      border-left-color: #667eea;
+    }
+
+    .nav-icon { font-size: 1rem; width: 20px; text-align: center; }
+
+    .sidebar-user {
+      padding: 1rem 1.25rem;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .user-avatar {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, #48bb78, #38a169);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: white;
+      flex-shrink: 0;
+    }
+
+    .user-info { overflow: hidden; }
+    .user-name { font-size: 0.8rem; font-weight: 500; color: #e2e8f0; truncate: ellipsis; }
+    .user-plan { font-size: 0.68rem; color: #4a5568; }
+
+    /* Main content */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .topbar {
+      background: #fff;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 0.9rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .topbar-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #1a202c;
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .badge-plan {
+      background: #ebf8ff;
+      color: #2b6cb0;
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 100px;
+    }
+
+    .session-info {
+      font-size: 0.72rem;
+      color: #718096;
+      font-family: monospace;
+    }
+
+    /* Content area */
+    .content {
+      flex: 1;
+      padding: 1.5rem;
+      overflow-y: auto;
+    }
+
+    /* Loading state */
+    .loading-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1.25rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+
+    .spinner {
+      width: 28px; height: 28px;
+      border: 3px solid #e2e8f0;
+      border-top-color: #667eea;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-text h3 { font-size: 0.95rem; font-weight: 600; color: #1a202c; }
+    .loading-text p  { font-size: 0.8rem; color: #718096; margin-top: 2px; }
+
+    /* Progress bar */
+    .progress-wrap {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1.25rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.78rem;
+      color: #4a5568;
+      margin-bottom: 0.6rem;
+    }
+    .progress-label span { font-weight: 500; }
+
+    .progress-bar-bg {
+      height: 6px;
+      background: #edf2f7;
+      border-radius: 100px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #667eea, #764ba2);
+      border-radius: 100px;
+      width: 0%;
+      animation: fillBar 9s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+    }
+
+    @keyframes fillBar {
+      0%   { width: 0%; }
+      15%  { width: 23%; }
+      40%  { width: 51%; }
+      65%  { width: 74%; }
+      85%  { width: 87%; }
+      100% { width: 91%; }   /* stalls here — never completes */
+    }
+
+    .progress-steps {
+      display: flex;
+      gap: 0.4rem;
+      margin-top: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .step {
+      font-size: 0.68rem;
+      padding: 3px 8px;
+      border-radius: 100px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .step.done { background: #f0fff4; color: #276749; }
+    .step.active { background: #ebf8ff; color: #2b6cb0; }
+    .step.pending { background: #f7fafc; color: #a0aec0; }
+
+    /* Skeleton cards */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .skeleton-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 1.25rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+
+    .skel {
+      background: linear-gradient(90deg, #f7fafc 25%, #edf2f7 50%, #f7fafc 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 4px;
+    }
+    @keyframes shimmer {
+      from { background-position: 200% 0; }
+      to   { background-position: -200% 0; }
+    }
+
+    .skel-label { height: 10px; width: 60%; margin-bottom: 12px; }
+    .skel-value { height: 28px; width: 80%; margin-bottom: 8px; }
+    .skel-sub   { height: 8px; width: 45%; }
+
+    .skel-table-row {
+      height: 40px;
+      width: 100%;
+      margin-bottom: 8px;
+    }
+
+    .table-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 1.25rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+
+    .table-card-header {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #1a202c;
+      margin-bottom: 1rem;
+    }
+
+    /* Fake welcome message that appears */
+    .welcome-toast {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      background: #1a1f36;
+      color: #fff;
+      padding: 0.75rem 1.25rem;
+      border-radius: 10px;
+      font-size: 0.82rem;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      animation: toastIn 0.4s ease 1.5s both;
+      z-index: 1000;
+      border-left: 3px solid #48bb78;
+    }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">🏢</div>
+      <span class="logo-text">NovaTech</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-label">Main</div>
+      <a href="#" class="nav-item active" onclick="ping('nav_dashboard')">
+        <span class="nav-icon">📊</span> Dashboard
+      </a>
+      <a href="#" class="nav-item" onclick="ping('nav_analytics')">
+        <span class="nav-icon">📈</span> Analytics
+      </a>
+      <a href="#" class="nav-item" onclick="ping('nav_reports')">
+        <span class="nav-icon">📋</span> Reports
+      </a>
+
+      <div class="nav-label">Account</div>
+      <a href="#" class="nav-item" onclick="ping('nav_settings')">
+        <span class="nav-icon">⚙️</span> Settings
+      </a>
+      <a href="#" class="nav-item" onclick="ping('nav_billing')">
+        <span class="nav-icon">💳</span> Billing
+      </a>
+      <a href="#" class="nav-item" onclick="ping('nav_team')">
+        <span class="nav-icon">👥</span> Team
+      </a>
+
+      <div class="nav-label">Support</div>
+      <a href="#" class="nav-item" onclick="ping('nav_docs')">
+        <span class="nav-icon">📚</span> Documentation
+      </a>
+      <a href="#" class="nav-item" onclick="ping('nav_logout')">
+        <span class="nav-icon">🚪</span> Logout
+      </a>
+    </nav>
+
+    <div class="sidebar-user">
+      <div class="user-avatar">{{ username[0].upper() }}</div>
+      <div class="user-info">
+        <div class="user-name">{{ username }}</div>
+        <div class="user-plan">{{ plan }} Plan</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="topbar">
+      <span class="topbar-title">Dashboard</span>
+      <div class="topbar-right">
+        <span class="badge-plan">{{ plan }}</span>
+        <span class="session-info">{{ session_id }} · Last login: {{ last_login }}</span>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- Loading header -->
+      <div class="loading-header">
+        <div class="spinner"></div>
+        <div class="loading-text">
+          <h3>Loading your dashboard...</h3>
+          <p>Fetching account data for <strong>{{ account_id }}</strong></p>
+        </div>
+      </div>
+
+      <!-- Progress -->
+      <div class="progress-wrap">
+        <div class="progress-label">
+          <span>Initializing workspace</span>
+          <span id="pctLabel">0%</span>
+        </div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-steps">
+          <span class="step done">✓ Authenticated</span>
+          <span class="step done">✓ Session validated</span>
+          <span class="step active">↻ Loading modules</span>
+          <span class="step pending">○ Syncing data</span>
+          <span class="step pending">○ Ready</span>
+        </div>
+      </div>
+
+      <!-- Skeleton metric cards -->
+      <div class="cards-grid">
+        <div class="skeleton-card">
+          <div class="skel skel-label"></div>
+          <div class="skel skel-value"></div>
+          <div class="skel skel-sub"></div>
+        </div>
+        <div class="skeleton-card">
+          <div class="skel skel-label"></div>
+          <div class="skel skel-value"></div>
+          <div class="skel skel-sub"></div>
+        </div>
+        <div class="skeleton-card">
+          <div class="skel skel-label"></div>
+          <div class="skel skel-value"></div>
+          <div class="skel skel-sub"></div>
+        </div>
+      </div>
+
+      <!-- Skeleton table -->
+      <div class="table-card">
+        <div class="table-card-header">Recent Activity</div>
+        <div class="skel skel-table-row"></div>
+        <div class="skel skel-table-row"></div>
+        <div class="skel skel-table-row"></div>
+        <div class="skel skel-table-row"></div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Toast -->
+  <div class="welcome-toast">✓ Welcome back, {{ username }}</div>
+
+  <script>
+    // Silently log page load
+    fetch("/trap/ping", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ event: "trap_page_load" })
+    });
+
+    // Log link clicks
+    function ping(event) {
+      fetch("/trap/ping", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ event: event })
+      });
+    }
+
+    // Animate progress label
+    const fill = document.getElementById("progressFill");
+    const label = document.getElementById("pctLabel");
+    const observer = new MutationObserver(() => {
+      const w = parseFloat(fill.style.width) || 0;
+      label.textContent = Math.round(w) + "%";
+    });
+
+    // Poll computed width since we're using CSS animation
+    const interval = setInterval(() => {
+      const w = parseFloat(getComputedStyle(fill).width) /
+                parseFloat(getComputedStyle(fill.parentElement).width) * 100;
+      label.textContent = Math.round(w) + "%";
+    }, 200);
+
+    // Update steps as progress advances
+    setTimeout(() => {
+      const steps = document.querySelectorAll(".step");
+      steps[2].className = "step done";
+      steps[2].textContent = "✓ Modules loaded";
+      steps[3].className = "step active";
+      steps[3].textContent = "↻ Syncing data";
+    }, 4000);
+  </script>
+</body>
+</html>
