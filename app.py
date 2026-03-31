@@ -461,12 +461,12 @@ def trap_ping():
 def admin_dashboard():
     with sqlite3.connect(DATABASE_PATH) as conn:
         conn.row_factory = sqlite3.Row
-        bots = conn.execute(
+        bots = [dict(r) for r in conn.execute(
             "SELECT * FROM captured_bots ORDER BY id DESC"
-        ).fetchall()
-        interactions = conn.execute(
+        ).fetchall()]
+        interactions = [dict(r) for r in conn.execute(
             "SELECT * FROM trap_interactions ORDER BY id DESC LIMIT 50"
-        ).fetchall()
+        ).fetchall()]
 
         today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         today_count = conn.execute(

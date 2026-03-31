@@ -400,7 +400,7 @@
               </td>
               <td>
                 <div class="signals-list">
-                  {% set sigs = bot['signals'] | tojson | fromjson %}
+                  {% set sigs = bot['signals'] | fromjson %}
                   {% for s in sigs[:4] %}
                     <span class="signal-tag">{{ s }}</span>
                   {% endfor %}
